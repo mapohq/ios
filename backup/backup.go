@@ -223,23 +223,29 @@ func (mb *MobileBackup) Domains() []string {
 
 // FileReader returns an io.Reader for the unencrypted contents of a file record
 func (mb *MobileBackup) FileReader(rec Record) (io.ReadCloser, error) {
-	rval := new(reader)
-	key := mb.FileKey(rec)
-
-	if key == nil {
-		return nil, errors.New("Can't get key for " + rec.Domain + "-" + rec.Path)
-	}
 	hcode := rec.HashCode()
 	fn := path.Join(mb.Dir, hcode)
 	// New path format
 	if _, err := os.Stat(fn); err != nil {
-		fn = path.Join(mb.Dir, hcode[:2], hcode)
-	}
-	rval.r, rval.err = os.Open(fn)
-	if rval.err != nil {
-		return nil, rval.err
+			fn = path.Join(mb.Dir, hcode[:2], hcode)
 	}
 
+	r, err := os.Open(fn)
+	if err != nil {
+			return nil, err
+	}
+
+	if !mb.Manifest.IsEncrypted {
+			return r, nil
+	}
+
+	rval := new(reader)
+	key := mb.FileKey(rec)
+	if key == nil {
+			return nil, errors.New("Can't get key for " + rec.Domain + "-" + rec.Path)
+	}
+
+	rval.r = r
 	b, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -446,7 +452,7 @@ func (mb *MobileBackup) decryptDatabase(fn string, mk []byte) (string, error) {
 
 func (mb *MobileBackup) readNewManifest() error {
 	var err error
-	fmt.Println("load")
+	// fmt.Println("load")
 	tmp := path.Join(mb.Dir, "Manifest.db")
 	mk := mb.Manifest.ManifestKey
 
