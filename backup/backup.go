@@ -369,7 +369,7 @@ func Enumerate() ([]Backup, error) {
 	if runtime.GOOS == "windows" {
 		usr, _ := user.Current()
 		hdir := usr.HomeDir
-		dir = path.Join(hdir, "AppData/Roaming/Apple Computer/MobileSync/Backup/")
+		dir = path.Join(hdir, "Apple/MobileSync/Backup")
 	} else {
 		home := os.Getenv("HOME")
 		dir = path.Join(home, "Library/Application Support/MobileSync/Backup")
@@ -408,7 +408,7 @@ func Open(guid string) (*MobileBackup, error) {
         if runtime.GOOS == "windows" {
                 usr, _ := user.Current()
                 hdir := usr.HomeDir
-                dir = path.Join(hdir, "AppData/Roaming/Apple Computer/MobileSync/Backup", guid)
+                dir = path.Join(hdir, "Apple/MobileSync/Backup", guid)
         } else {
                 home := os.Getenv("HOME")
                 dir = path.Join(home, "Library/Application Support/MobileSync/Backup", guid)
