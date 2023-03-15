@@ -15,8 +15,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
 	"path"
 	"sort"
+	"runtime"
+	
 
 	"github.com/dunhamsteve/ios/crypto/aeswrap"
 	"github.com/dunhamsteve/ios/keybag"
@@ -227,22 +230,22 @@ func (mb *MobileBackup) FileReader(rec Record) (io.ReadCloser, error) {
 	fn := path.Join(mb.Dir, hcode)
 	// New path format
 	if _, err := os.Stat(fn); err != nil {
-			fn = path.Join(mb.Dir, hcode[:2], hcode)
+		fn = path.Join(mb.Dir, hcode[:2], hcode)
 	}
 
 	r, err := os.Open(fn)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	if !mb.Manifest.IsEncrypted {
-			return r, nil
+		return r, nil
 	}
 
 	rval := new(reader)
 	key := mb.FileKey(rec)
 	if key == nil {
-			return nil, errors.New("Can't get key for " + rec.Domain + "-" + rec.Path)
+		return nil, errors.New("Can't get key for " + rec.Domain + "-" + rec.Path)
 	}
 
 	rval.r = r
@@ -361,8 +364,17 @@ type Backup struct {
 // Enumerate lists the available backups
 func Enumerate() ([]Backup, error) {
 	var all []Backup
-	home := os.Getenv("HOME")
-	dir := path.Join(home, "Library/Application Support/MobileSync/Backup")
+	var dir string
+
+	if runtime.GOOS == "windows" {
+		usr, _ := user.Current()
+		hdir := usr.HomeDir
+		dir = path.Join(hdir, "AppData/Roaming/Apple Computer/MobileSync/Backup/")
+	} else {
+		home := os.Getenv("HOME")
+		dir = path.Join(home, "Library/Application Support/MobileSync/Backup")
+	}
+
 	r, err := os.Open(dir)
 	if err != nil {
 		return nil, err
@@ -392,8 +404,17 @@ func Enumerate() ([]Backup, error) {
 func Open(guid string) (*MobileBackup, error) {
 	var backup MobileBackup
 
-	home := os.Getenv("HOME")
-	backup.Dir = path.Join(home, "Library/Application Support/MobileSync/Backup", guid)
+	var dir string
+        if runtime.GOOS == "windows" {
+                usr, _ := user.Current()
+                hdir := usr.HomeDir
+                dir = path.Join(hdir, "AppData/Roaming/Apple Computer/MobileSync/Backup", guid)
+        } else {
+                home := os.Getenv("HOME")
+                dir = path.Join(home, "Library/Application Support/MobileSync/Backup", guid)
+        }
+
+	backup.Dir = dir
 	tmp := path.Join(backup.Dir, "Manifest.plist")
 	r, err := os.Open(tmp)
 	if err != nil {
